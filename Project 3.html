@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Stock Data Visualization</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <canvas id="stockChart" width="800" height="400"></canvas>
+
+  <script>
+    // Function to fetch stock data from Alpha Vantage
+    async function getStockData(symbol) {
+      const apiKey = 'ZCXXP8KLU02WGO7O';
+      const baseUrl = `https://www.alphavantage.co/query${symbol}&apikey=${apiKey}`;
+
+      try {
+        const response = await fetch(baseUrl);
+        const data = await response.json();
+        return data['Monthly Time Series'];
+      } catch (error) {
+        console.error(`Failed to fetch data for ${symbol}: ${error}`);
+        return null;
+      }
+    }
+
+    // List of stock symbols
+    const stocks = ['GOOGL', 'AAPL', 'META', 'AMZN', 'MSFT', 'SNAP'];
+
+    // Fetch data for each stock
+    async function fetchStockData() {
+      const stockData = {};
+      for (const stock of stocks) {
+        stockData[stock] = await getStockData(stock);
+      }
+      return stockData;
+    }
+
+    // Function to format data for chart
+    function formatDataForChart(stockData) {
+      const formattedData = {};
+      for (const stock in stockData) {
+        formattedData[stock] = [];
+        for (const date in stockData[stock]) {
+          formattedData[stock].push({
+            x: new Date(date),
+            y: parseFloat(stockData[stock][date]['4. close'])
+          });
+        }
+      }
+      return formattedData;
+    }
+
+    // Create line chart using Chart.js
+    async function createLineChart() {
+      const stockData = await fetchStockData();
+      const formattedData = formatDataForChart(stockData);
+
+      const ctx = document.getElementById('stockChart').getContext('2d');
+      const stockChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: stocks.map(stock => ({
+            label: stock,
+            data: formattedData[stock],
+            borderColor: '#' + (Math.random().toString(16) + '000000').substring(2, 8), // Random color
+            fill: false
+          }))
+        },
+        options: {
+          title: {
+            display: true,
+            text: 'Closing Cost of Stocks for Each Month since 2013'
+          },
+          scales: {
+            xAxes: [{
+              type: 'time',
+              time: {
+                unit: 'month',
+                tooltipFormat: 'MMM YYYY', // Format for tooltip
+                displayFormats: {
+                  month: 'MMM YYYY' // Format for displaying month and year on x-axis
+                }
+              },
+              scaleLabel: {
+                display: true,
+                labelString: 'Date'
+              }
+            }],
+            yAxes: [{
+              scaleLabel: {
+                display: true,
+                labelString: 'Closing Cost'
+              },
+              ticks: {
+                callback: function(value, index, values) {
+                  return '$' + value; // Format y-axis labels as currency
+                }
+              }
+            }]
+          }
+        }
+      });
+    }
+
+    // Initialize chart creation
+    createLineChart();
+  </script>
+</body>
+</html>
